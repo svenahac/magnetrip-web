@@ -32,6 +32,11 @@ test('buildCss maps semantic + brand variables', () => {
   expect(css).toContain('--secondary: #F0EDE7;');
   expect(css).toContain('--secondary-foreground: #44403C;');
   expect(css).not.toContain('--accent: #E07A5F;');
+  expect(css).toContain('--radius-sm: 8px;');
+  expect(css).toContain('--radius-md: 12px;');
+  expect(css).toContain('--radius-lg: 16px;');
+  expect(css).toContain('--radius-xl: 20px;');
+  expect(css).toContain('--radius-2xl: 24px;');
 });
 
 test('buildDart maps colors to Flutter ARGB and is material-only', () => {
