@@ -28,6 +28,10 @@ test('buildCss maps semantic + brand variables', () => {
   expect(css).toContain('--brand-accent: #E07A5F;');
   expect(css).toContain('--color-success: var(--success);');
   expect(css).not.toContain('.dark');
+  expect(css).toContain('--accent: #F0EDE7;');
+  expect(css).toContain('--secondary: #F0EDE7;');
+  expect(css).toContain('--secondary-foreground: #44403C;');
+  expect(css).not.toContain('--accent: #E07A5F;');
 });
 
 test('buildDart maps colors to Flutter ARGB and is material-only', () => {
