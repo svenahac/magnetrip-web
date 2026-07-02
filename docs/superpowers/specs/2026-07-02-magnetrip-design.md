@@ -25,7 +25,7 @@ A **Magnet** is a travel trip. On the web, owners manage rich trips (images, des
 - **Backend:** Supabase (Auth, Postgres, Storage, RLS). Env vars already present in `magnetrip-web/.env` (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`). Connect only; do not recreate the project.
 - **API layer:** A single HTTP API lives in `magnetrip-web/app/api/*`. **Both** clients consume it — the web frontend and Flutter. **No page, component, or screen touches `supabase-js` for data.** Only the service layer behind the API routes talks to Supabase. (Exception: **auth/session** uses the Supabase SDK directly on both clients — that is login, not data.)
 - **Mobile → backend:** Flutter calls the Next.js REST API over HTTP with the user's Supabase JWT as a `Bearer` token.
-- **Auth:** Email + password (Supabase Auth) on both clients.
+- **Auth:** Email + password (Supabase Auth) on both clients. Full flow: **login, signup, forgot-password (request reset email), and reset-password (set a new password)**. Signup and password-reset UIs live on the **web** app; the Flutter app offers login + a "forgot password" action that triggers the reset email (the emailed link opens the web `reset-password` page).
 - **Public URL:** short opaque id, `/{PUBLIC_SITE_URL}/t/{public_id}`. Stable for the life of the trip; safe to write to NFC once. This exact string is what gets written to the tag.
 - **Theme:** light only.
 - **Deployment:** web app deploys to **Vercel** (needed early so NFC + public pages resolve to a real HTTPS domain).
@@ -97,6 +97,9 @@ Lucide on both platforms: `lucide-react` (web, already installed) and `lucide_ic
 magnetrip-web/                 # Next.js — owns the API + service layer
   app/
     (auth)/login/
+    (auth)/signup/
+    (auth)/forgot-password/
+    (auth)/reset-password/      # opened from the reset email link
     (app)/dashboard/
     (app)/trips/[id]/edit/
     t/[publicId]/              # public page, no auth
@@ -219,7 +222,10 @@ All under `magnetrip-web/app/api`. JSON in/out, Zod-validated, typed DTOs shared
 
 ## 7. Web App (Next.js)
 
-- **`(auth)/login`** — email+password form; validation, loading, auth-error messaging; redirect to dashboard on success. Middleware guards `(app)/*` and redirects unauthenticated users here.
+- **`(auth)/login`** — email+password form; validation, loading, auth-error messaging; redirect to dashboard on success. Links to signup and forgot-password. Middleware guards `(app)/*` and redirects unauthenticated users here.
+- **`(auth)/signup`** — create account (email + password + confirm); validation and duplicate-email handling; on success, either land on the dashboard or show a "confirm your email" message depending on the Supabase email-confirmation setting.
+- **`(auth)/forgot-password`** — enter email → send Supabase reset email (`redirectTo` the `reset-password` page). Always show a neutral "if the account exists, we sent a link" confirmation.
+- **`(auth)/reset-password`** — opened from the emailed link (carries the recovery session); set + confirm a new password; on success redirect to login/dashboard. Handles expired/invalid links.
 - **`(app)/dashboard`** — grid of trip cards. Each card: cover image (or gradient placeholder), name, year, description preview, and actions: **Edit**, **Delete** (confirm dialog), **Show public page** (opens `/t/:publicId`), **Copy public link** (toast confirm).
 - **`(app)/trips/[id]/edit`** — edit name, year, description; image manager (upload multiple, drag-reorder, delete, set cover); save with optimistic feedback.
 - **`t/[publicId]`** — public, no auth. Polished responsive gallery: name, year, description, image gallery (lazy-loaded, optimized). Handles "trip not found" gracefully.
@@ -231,7 +237,7 @@ All under `magnetrip-web/app/api`. JSON in/out, Zod-validated, typed DTOs shared
 
 Feature-first + **Riverpod** (repos and controllers as providers; `AsyncValue` drives loading/error/data). `go_router` for navigation, `dio` for HTTP with an auth interceptor that injects the current Supabase JWT and refreshes it. Theme generated from `tokens.json`.
 
-- **Login** — email+password via `supabase_flutter`; on success the session token is used for all API calls.
+- **Login** — email+password via `supabase_flutter`; on success the session token is used for all API calls. Includes a **forgot-password** action that sends the reset email (link opens the web `reset-password` page). Account signup is handled on the web app.
 - **Trip list** — the caller's trips, **name only** (per spec). Pull-to-refresh. Per-item actions: **Rename**, **Delete**, **Relink NFC**.
 - **Create trip** — Step 1: enter name → Step 2: press **Create** (POST `/api/trips`) → Step 3: **immediately** start NFC linking: scan a tag, write the trip's public URL, show success/failure. On success, `PATCH /api/trips/:id/nfc` records the tag.
 - **Relink NFC** — scan a tag and overwrite it with the latest public URL; confirm success.
@@ -278,9 +284,9 @@ No root `CLAUDE.md`. Each app gets its own, tuned to that stack, covering: overv
 One spec, built in five sequenced milestones (detailed by the planning phase):
 
 1. **Foundation** — connect Supabase; schema + RLS + storage bucket + `get_public_trip`; `tokens.json` + generator (emits web CSS vars + Flutter theme); shared TS types/Zod; both `CLAUDE.md` files.
-2. **Web core** — auth + middleware; service layer + API routes for trips/images; `api-client`; dashboard; trip editor (upload/reorder/delete/cover).
+2. **Web core** — full auth (login, signup, forgot-password, reset-password) + middleware; service layer + API routes for trips/images; `api-client`; dashboard; trip editor (upload/reorder/delete/cover).
 3. **Public page + Vercel deploy** — `t/[publicId]` + public API/RPC; deploy so a real HTTPS base URL exists for NFC.
-4. **Flutter foundation** — theme from tokens; config/env base URL; `dio` client + auth interceptor; login; trip list + create/rename/delete against the API.
+4. **Flutter foundation** — theme from tokens; config/env base URL; `dio` client + auth interceptor; login + forgot-password; trip list + create/rename/delete against the API.
 5. **Flutter NFC** — create-trip → immediate write flow; relink; full NFC error handling.
 
 Each milestone is independently verifiable and leaves the product in a working state.
