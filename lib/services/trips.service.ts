@@ -12,7 +12,7 @@ type TripWithImages = TripRow & { trip_images: ImageRow[] | null };
 export async function listTrips(supabase: SupabaseClient): Promise<TripListItem[]> {
   const { data, error } = await supabase
     .from('trips')
-    .select(`${TRIP_COLUMNS}, trip_images(${IMAGE_COLUMNS})`)
+    .select(`${TRIP_COLUMNS}, trip_images!trip_id(${IMAGE_COLUMNS})`)
     .order('created_at', { ascending: false });
   if (error) throw new ServiceError('internal', error.message);
   return (data as TripWithImages[] | null ?? []).map((row) =>
@@ -22,7 +22,7 @@ export async function listTrips(supabase: SupabaseClient): Promise<TripListItem[
 export async function getTrip(supabase: SupabaseClient, id: string): Promise<Trip> {
   const { data, error } = await supabase
     .from('trips')
-    .select(`${TRIP_COLUMNS}, trip_images(${IMAGE_COLUMNS})`)
+    .select(`${TRIP_COLUMNS}, trip_images!trip_id(${IMAGE_COLUMNS})`)
     .eq('id', id)
     .maybeSingle();
   if (error) throw new ServiceError('internal', error.message);
