@@ -55,6 +55,11 @@ export async function updateTrip(
   id: string,
   input: UpdateTripInput,
 ): Promise<Trip> {
+  const { data: exists, error: existsErr } = await supabase
+    .from('trips').select('id').eq('id', id).maybeSingle();
+  if (existsErr) throw new ServiceError('internal', existsErr.message);
+  if (!exists) throw new ServiceError('not_found', 'Trip not found');
+
   // Enforce that a chosen cover image belongs to THIS trip (RLS also scopes to the owner).
   if (input.coverImageId) {
     const { data: img, error: imgErr } = await supabase
@@ -88,10 +93,13 @@ export async function updateTrip(
 
 export async function deleteTrip(supabase: SupabaseClient, id: string): Promise<void> {
   // Collect storage paths first so we can clean up objects after the row cascade.
-  const { data: images } = await supabase
+  const { data: images, error: imagesErr } = await supabase
     .from('trip_images')
     .select('storage_path')
     .eq('trip_id', id);
+  if (imagesErr) {
+    console.error('Failed to fetch trip images for storage cleanup:', imagesErr.message);
+  }
 
   const { data, error } = await supabase
     .from('trips')
@@ -104,6 +112,9 @@ export async function deleteTrip(supabase: SupabaseClient, id: string): Promise<
 
   const paths = (images ?? []).map((r: { storage_path: string }) => r.storage_path);
   if (paths.length > 0) {
-    await supabase.storage.from('trip-images').remove(paths);
+    const { error: removeErr } = await supabase.storage.from('trip-images').remove(paths);
+    if (removeErr) {
+      console.error('Failed to remove trip images from storage:', removeErr.message);
+    }
   }
 }

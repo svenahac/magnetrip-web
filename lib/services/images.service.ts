@@ -52,6 +52,17 @@ export async function registerImage(
   return mapImageRow(data as ImageRow);
 }
 
+/** Throws ServiceError('validation') unless incomingIds is an exact, duplicate-free permutation of ownedIds. */
+export function assertValidReorder(incomingIds: string[], ownedIds: string[]): void {
+  const incoming = new Set(incomingIds);
+  const owned = new Set(ownedIds);
+  const bijection =
+    incoming.size === incomingIds.length && // no duplicates
+    incoming.size === owned.size &&
+    incomingIds.every((id) => owned.has(id));
+  if (!bijection) throw new ServiceError('validation', 'Image list does not match this trip');
+}
+
 export async function reorderImages(
   supabase: SupabaseClient,
   tripId: string,
@@ -60,10 +71,7 @@ export async function reorderImages(
   const { data: existing, error } = await supabase
     .from('trip_images').select('id').eq('trip_id', tripId);
   if (error) throw new ServiceError('internal', error.message);
-  const owned = new Set((existing ?? []).map((r: { id: string }) => r.id));
-  if (imageIds.length !== owned.size || !imageIds.every((id) => owned.has(id))) {
-    throw new ServiceError('validation', 'Image list does not match this trip');
-  }
+  assertValidReorder(imageIds, (existing ?? []).map((r: { id: string }) => r.id));
   for (let i = 0; i < imageIds.length; i++) {
     const { error: upErr } = await supabase
       .from('trip_images').update({ position: i }).eq('id', imageIds[i]).eq('trip_id', tripId);
@@ -79,5 +87,11 @@ export async function deleteImage(supabase: SupabaseClient, imageId: string): Pr
 
   const { error: delErr } = await supabase.from('trip_images').delete().eq('id', imageId);
   if (delErr) throw new ServiceError('internal', delErr.message);
-  await supabase.storage.from('trip-images').remove([(img as { storage_path: string }).storage_path]);
+
+  const { error: removeErr } = await supabase.storage
+    .from('trip-images')
+    .remove([(img as { storage_path: string }).storage_path]);
+  if (removeErr) {
+    console.error('Failed to remove trip image from storage:', removeErr.message);
+  }
 }
