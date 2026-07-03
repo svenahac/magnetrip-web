@@ -12,6 +12,7 @@ test('signupSchema enforces min password length and matching confirmation', () =
   expect(signupSchema.safeParse({ email: 'a@b.com', password: 'short', confirmPassword: 'short' }).success).toBe(false);
   const mismatch = signupSchema.safeParse({ email: 'a@b.com', password: 'secret12', confirmPassword: 'secret99' });
   expect(mismatch.success).toBe(false);
+  if (!mismatch.success) expect(mismatch.error.issues[0]?.path).toEqual(['confirmPassword']);
 });
 
 test('forgotPasswordSchema requires a valid email', () => {
@@ -22,4 +23,7 @@ test('forgotPasswordSchema requires a valid email', () => {
 test('resetPasswordSchema enforces min length and matching confirmation', () => {
   expect(resetPasswordSchema.safeParse({ password: 'secret12', confirmPassword: 'secret12' }).success).toBe(true);
   expect(resetPasswordSchema.safeParse({ password: 'secret12', confirmPassword: 'nope' }).success).toBe(false);
+  const rp = resetPasswordSchema.safeParse({ password: 'secret12', confirmPassword: 'nope' });
+  expect(rp.success).toBe(false);
+  if (!rp.success) expect(rp.error.issues[0]?.path).toEqual(['confirmPassword']);
 });

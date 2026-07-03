@@ -16,6 +16,11 @@ test('maps a rate-limit error', () => {
     .toBe('Too many attempts. Please wait a moment and try again.');
 });
 
+test('maps message-only errors (no code) via message matching', () => {
+  expect(authErrorMessage({ message: 'Invalid login credentials' })).toBe('Incorrect email or password.');
+  expect(authErrorMessage({ message: 'User already registered' })).toBe('An account with this email already exists.');
+});
+
 test('falls back to a generic message for unknown errors', () => {
   expect(authErrorMessage({ message: 'weird internal thing' }))
     .toBe('Something went wrong. Please try again.');
