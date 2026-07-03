@@ -49,7 +49,10 @@ export default function TripEditorPage() {
         <>
           <h1 className="text-2xl font-bold">{trip.name}</h1>
           <TripDetailsForm trip={trip} onSaved={setTrip} />
-          <ImageManager trip={trip} onChange={setTrip} />
+          <ImageManager
+            trip={trip}
+            onChange={(patch) => setTrip((cur) => (cur ? { ...cur, ...patch } : cur))}
+          />
         </>
       )}
     </div>

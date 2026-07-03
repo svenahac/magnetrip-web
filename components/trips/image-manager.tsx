@@ -12,16 +12,23 @@ import { Badge } from '@/components/ui/badge';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Spinner } from '@/components/ui/spinner';
 
-export function ImageManager({ trip, onChange }: { trip: Trip; onChange: (t: Trip) => void }) {
+export function ImageManager({
+  trip,
+  onChange,
+}: {
+  trip: Trip;
+  onChange: (patch: { images: TripImage[]; coverImageId: string | null }) => void;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [images, setImages] = useState<TripImage[]>(trip.images);
   const [coverId, setCoverId] = useState<string | null>(trip.coverImageId);
   const [uploading, setUploading] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
-  function apply(next: TripImage[]) {
-    setImages(next);
-    onChange({ ...trip, images: next, coverImageId: coverId });
+  function emit(nextImages: TripImage[], nextCover: string | null) {
+    setImages(nextImages);
+    setCoverId(nextCover);
+    onChange({ images: nextImages, coverImageId: nextCover });
   }
 
   async function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
@@ -34,7 +41,7 @@ export function ImageManager({ trip, onChange }: { trip: Trip; onChange: (t: Tri
       try {
         const img = await uploadTripImage(trip.id, file, next.length);
         next.push(img);
-        apply([...next]);
+        emit([...next], coverId);
       } catch (err) {
         toast.error(err instanceof ApiError ? err.message : `Could not upload ${file.name}`);
       }
@@ -45,8 +52,8 @@ export function ImageManager({ trip, onChange }: { trip: Trip; onChange: (t: Tri
   async function remove(imageId: string) {
     try {
       await apiClient.deleteImage(imageId);
-      apply(images.filter((i) => i.id !== imageId));
-      if (coverId === imageId) setCoverId(null);
+      const nextCover = coverId === imageId ? null : coverId;
+      emit(images.filter((i) => i.id !== imageId), nextCover);
       toast.success('Image removed');
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Could not remove the image');
@@ -56,8 +63,7 @@ export function ImageManager({ trip, onChange }: { trip: Trip; onChange: (t: Tri
   async function setCover(imageId: string) {
     try {
       const updated = await apiClient.updateTrip(trip.id, { coverImageId: imageId });
-      setCoverId(updated.coverImageId);
-      onChange(updated);
+      emit(images, updated.coverImageId);
       toast.success('Cover updated');
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Could not set the cover');
@@ -66,11 +72,11 @@ export function ImageManager({ trip, onChange }: { trip: Trip; onChange: (t: Tri
 
   async function persistOrder(next: TripImage[]) {
     const previous = images;
-    apply(next);
+    emit(next, coverId);
     try {
       await apiClient.reorderImages(trip.id, next.map((i) => i.id));
     } catch (err) {
-      apply(previous); // revert on failure
+      emit(previous, coverId); // revert on failure
       toast.error(err instanceof ApiError ? err.message : 'Could not reorder images');
     }
   }
@@ -110,12 +116,12 @@ export function ImageManager({ trip, onChange }: { trip: Trip; onChange: (t: Tri
               className="group relative cursor-move overflow-hidden rounded-lg border border-border"
             >
               <AspectRatio ratio={1}>
-                <Image src={img.url} alt="" fill sizes="33vw" className="object-cover" />
+                <Image src={img.url} alt={`Trip photo ${index + 1}`} fill sizes="33vw" className="object-cover" />
               </AspectRatio>
               {coverId === img.id ? (
                 <Badge className="absolute left-2 top-2">Cover</Badge>
               ) : null}
-              <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-gradient-to-t from-foreground/70 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
                 <Button type="button" size="icon" variant="secondary" aria-label="Set as cover"
                   onClick={() => void setCover(img.id)}><Star className="size-4" /></Button>
                 <Button type="button" size="icon" variant="destructive" aria-label="Delete image"
