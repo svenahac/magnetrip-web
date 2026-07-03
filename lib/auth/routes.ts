@@ -15,3 +15,12 @@ export function isAuthEntryPath(pathname: string): boolean {
 export function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'));
 }
+
+/** Returns `next` only if it is a safe same-origin relative path; otherwise the dashboard.
+ *  Prevents open redirects (protocol-relative //, backslash tricks, absolute URLs, userinfo @). */
+export function safeNextPath(next: string | null | undefined): string {
+  if (!next || !next.startsWith('/') || next.startsWith('//') || next.includes('\\')) {
+    return '/dashboard';
+  }
+  return next;
+}

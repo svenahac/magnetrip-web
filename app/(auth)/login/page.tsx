@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { loginSchema } from '@/lib/validation/auth';
 import { authErrorMessage } from '@/lib/auth/error-messages';
+import { safeNextPath } from '@/lib/auth/routes';
 import { AuthShell } from '@/components/auth/auth-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +23,7 @@ export default function LoginPage() {
 
 function LoginForm() {
   const router = useRouter();
-  const next = useSearchParams().get('next') ?? '/dashboard';
+  const next = safeNextPath(useSearchParams().get('next'));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
