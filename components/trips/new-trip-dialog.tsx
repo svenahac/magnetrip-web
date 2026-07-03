@@ -33,7 +33,7 @@ export function NewTripDialog() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setName(''); setError(null); } }}>
       <DialogTrigger render={<Button />}>
         <Plus className="size-4" /> New trip
       </DialogTrigger>

@@ -109,7 +109,7 @@ export function ImageManager({
           {images.map((img, index) => (
             <div
               key={img.id}
-              draggable
+              draggable={!uploading}
               onDragStart={() => setDragIndex(index)}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => onDrop(index)}
@@ -123,9 +123,9 @@ export function ImageManager({
               ) : null}
               <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-gradient-to-t from-foreground/70 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
                 <Button type="button" size="icon" variant="secondary" aria-label="Set as cover"
-                  onClick={() => void setCover(img.id)}><Star className="size-4" /></Button>
+                  disabled={uploading} onClick={() => void setCover(img.id)}><Star className="size-4" /></Button>
                 <Button type="button" size="icon" variant="destructive" aria-label="Delete image"
-                  onClick={() => void remove(img.id)}><Trash2 className="size-4" /></Button>
+                  disabled={uploading} onClick={() => void remove(img.id)}><Trash2 className="size-4" /></Button>
               </div>
             </div>
           ))}
