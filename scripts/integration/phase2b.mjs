@@ -6,9 +6,15 @@ const BASE = process.env.API_BASE_URL ?? 'http://localhost:3000';
 
 const supabase = createClient(url, key, { auth: { persistSession: false } });
 
+// Seeded test user. Uses a vercel.app-domain email because Supabase's email
+// validator rejects example.com; the account is created via signUp + confirmed
+// via SQL by the controller (see the plan's Task 10 setup).
+const TEST_EMAIL = process.env.ITEST_EMAIL ?? 'itest@magnetrip-web.vercel.app';
+const TEST_PASSWORD = process.env.ITEST_PASSWORD ?? 'itest-password-123';
+
 async function main() {
   const { data: auth, error: authErr } = await supabase.auth.signInWithPassword({
-    email: 'itest@example.com', password: 'itest-password-123',
+    email: TEST_EMAIL, password: TEST_PASSWORD,
   });
   if (authErr) throw new Error('sign-in failed: ' + authErr.message);
   const token = auth.session.access_token;
