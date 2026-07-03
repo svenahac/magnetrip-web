@@ -7,6 +7,7 @@ import { ArrowLeft } from 'lucide-react';
 import { apiClient, ApiError } from '@/lib/api-client';
 import type { Trip } from '@/lib/types/trip';
 import { TripDetailsForm } from '@/components/trips/trip-details-form';
+import { ImageManager } from '@/components/trips/image-manager';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 
@@ -48,7 +49,7 @@ export default function TripEditorPage() {
         <>
           <h1 className="text-2xl font-bold">{trip.name}</h1>
           <TripDetailsForm trip={trip} onSaved={setTrip} />
-          {/* Image manager is mounted here in Task 6 */}
+          <ImageManager trip={trip} onChange={setTrip} />
         </>
       )}
     </div>
