@@ -17,6 +17,7 @@ export function ImageManager({ trip, onChange }: { trip: Trip; onChange: (t: Tri
   const [images, setImages] = useState<TripImage[]>(trip.images);
   const [coverId, setCoverId] = useState<string | null>(trip.coverImageId);
   const [uploading, setUploading] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   function apply(next: TripImage[]) {
     setImages(next);
@@ -63,6 +64,26 @@ export function ImageManager({ trip, onChange }: { trip: Trip; onChange: (t: Tri
     }
   }
 
+  async function persistOrder(next: TripImage[]) {
+    const previous = images;
+    apply(next);
+    try {
+      await apiClient.reorderImages(trip.id, next.map((i) => i.id));
+    } catch (err) {
+      apply(previous); // revert on failure
+      toast.error(err instanceof ApiError ? err.message : 'Could not reorder images');
+    }
+  }
+
+  function onDrop(targetIndex: number) {
+    if (dragIndex === null || dragIndex === targetIndex) { setDragIndex(null); return; }
+    const next = [...images];
+    const [moved] = next.splice(dragIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    setDragIndex(null);
+    void persistOrder(next);
+  }
+
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
@@ -79,8 +100,15 @@ export function ImageManager({ trip, onChange }: { trip: Trip; onChange: (t: Tri
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {images.map((img) => (
-            <div key={img.id} className="group relative overflow-hidden rounded-lg border border-border">
+          {images.map((img, index) => (
+            <div
+              key={img.id}
+              draggable
+              onDragStart={() => setDragIndex(index)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => onDrop(index)}
+              className="group relative cursor-move overflow-hidden rounded-lg border border-border"
+            >
               <AspectRatio ratio={1}>
                 <Image src={img.url} alt="" fill sizes="33vw" className="object-cover" />
               </AspectRatio>
