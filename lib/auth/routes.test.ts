@@ -6,6 +6,9 @@ test('isProtectedPath matches the app area', () => {
   expect(isProtectedPath('/dashboard/anything')).toBe(true);
   expect(isProtectedPath('/login')).toBe(false);
   expect(isProtectedPath('/t/abc123')).toBe(false); // public trip page
+  expect(isProtectedPath('/trips')).toBe(true);
+  expect(isProtectedPath('/trips/abc/edit')).toBe(true);
+  expect(isProtectedPath('/tripsomething')).toBe(false);
 });
 
 test('isAuthPath matches only the auth screens', () => {
