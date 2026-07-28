@@ -3,9 +3,9 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { MoreVertical, Pencil, ExternalLink, Link as LinkIcon, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
 import type { TripListItem } from '@/lib/types/trip';
 import { descriptionPreview, publicTripUrl } from '@/lib/trips/format';
+import { copyPublicLink } from '@/components/trips/trip-actions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,15 +16,6 @@ import {
 
 export function TripCard({ trip, onDelete }: { trip: TripListItem; onDelete: (id: string) => void }) {
   const url = publicTripUrl(trip.publicId);
-
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(url);
-      toast.success('Public link copied');
-    } catch {
-      toast.error('Could not copy the link');
-    }
-  }
 
   return (
     <Card className="group gap-0 overflow-hidden py-0">
@@ -54,7 +45,7 @@ export function TripCard({ trip, onDelete }: { trip: TripListItem; onDelete: (id
               <DropdownMenuItem className="whitespace-nowrap" render={<a href={url} target="_blank" rel="noopener noreferrer" />}>
                 <ExternalLink className="size-4" /> Show public page
               </DropdownMenuItem>
-              <DropdownMenuItem className="whitespace-nowrap" onClick={() => { void copyLink(); }}>
+              <DropdownMenuItem className="whitespace-nowrap" onClick={() => { void copyPublicLink(url); }}>
                 <LinkIcon className="size-4" /> Copy public link
               </DropdownMenuItem>
               <DropdownMenuSeparator />

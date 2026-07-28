@@ -1,20 +1,24 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { apiClient, ApiError } from '@/lib/api-client';
 import type { Trip } from '@/lib/types/trip';
 import { TripDetailsForm } from '@/components/trips/trip-details-form';
 import { ImageManager } from '@/components/trips/image-manager';
+import { TripActions } from '@/components/trips/trip-actions';
+import { DeleteTripDialog } from '@/components/trips/delete-trip-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 
 export default function TripEditorPage() {
   const id = useParams<{ id: string }>().id;
+  const router = useRouter();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -47,11 +51,20 @@ export default function TripEditorPage() {
         </div>
       ) : (
         <>
-          <h1 className="text-2xl font-bold">{trip.name}</h1>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="min-w-0 truncate text-2xl font-bold">{trip.name}</h1>
+            <TripActions publicId={trip.publicId} onDelete={() => setConfirmDelete(true)} />
+          </div>
           <TripDetailsForm trip={trip} onSaved={setTrip} />
           <ImageManager
             trip={trip}
             onChange={(patch) => setTrip((cur) => (cur ? { ...cur, ...patch } : cur))}
+          />
+          <DeleteTripDialog
+            tripId={trip.id}
+            open={confirmDelete}
+            onOpenChange={setConfirmDelete}
+            onDeleted={() => router.push('/dashboard')}
           />
         </>
       )}
