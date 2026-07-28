@@ -1,11 +1,43 @@
 import { randomUUID } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { TripImage, RegisterImageInput } from '@/lib/types/trip';
+import { coverAfterAdd, coverAfterDelete } from '@/lib/trips/cover';
 import { ServiceError } from './errors';
 import { mapImageRow, type ImageRow } from './mappers';
 import { IMAGE_COLUMNS } from './trips.service';
 
 const ALLOWED_EXT = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif']);
+
+/**
+ * Reads the trip's current cover. Returns undefined when it cannot be read —
+ * the caller then skips auto-assignment rather than guessing.
+ */
+async function readCover(
+  supabase: SupabaseClient,
+  tripId: string,
+): Promise<string | null | undefined> {
+  const { data, error } = await supabase
+    .from('trips').select('cover_image_id').eq('id', tripId).maybeSingle();
+  if (error || !data) return undefined;
+  return (data as { cover_image_id: string | null }).cover_image_id;
+}
+
+/**
+ * Moves the cover to [next] unless it is already there. Auto-assignment is a
+ * convenience on top of a request that has already succeeded, so a failure here
+ * is logged rather than thrown.
+ */
+async function writeCover(
+  supabase: SupabaseClient,
+  tripId: string,
+  previous: string | null,
+  next: string | null,
+): Promise<void> {
+  if (next === previous) return;
+  const { error } = await supabase
+    .from('trips').update({ cover_image_id: next }).eq('id', tripId);
+  if (error) console.error('Failed to auto-assign the trip cover image:', error.message);
+}
 
 export async function createSignedUpload(
   supabase: SupabaseClient,
@@ -49,7 +81,15 @@ export async function registerImage(
     .select(IMAGE_COLUMNS)
     .single();
   if (error) throw new ServiceError('internal', error.message);
-  return mapImageRow(data as ImageRow);
+
+  const image = mapImageRow(data as ImageRow);
+  // The first image of a coverless trip becomes its cover, so every trip with
+  // photos has one without the user having to pick.
+  const cover = await readCover(supabase, tripId);
+  if (cover !== undefined) {
+    await writeCover(supabase, tripId, cover, coverAfterAdd(cover, image.id));
+  }
+  return image;
 }
 
 /** Throws ServiceError('validation') unless incomingIds is an exact, duplicate-free permutation of ownedIds. */
@@ -81,12 +121,29 @@ export async function reorderImages(
 
 export async function deleteImage(supabase: SupabaseClient, imageId: string): Promise<void> {
   const { data: img, error } = await supabase
-    .from('trip_images').select('id, storage_path').eq('id', imageId).maybeSingle();
+    .from('trip_images').select('id, trip_id, storage_path').eq('id', imageId).maybeSingle();
   if (error) throw new ServiceError('internal', error.message);
   if (!img) throw new ServiceError('not_found', 'Image not found');
 
+  const tripId = (img as { trip_id: string }).trip_id;
+  // Read the cover before the delete: the FK nulls the column on the way out,
+  // so afterwards there is no way to tell whether this image was the cover.
+  const cover = await readCover(supabase, tripId);
+
   const { error: delErr } = await supabase.from('trip_images').delete().eq('id', imageId);
   if (delErr) throw new ServiceError('internal', delErr.message);
+
+  if (cover === imageId) {
+    const { data: rows, error: restErr } = await supabase
+      .from('trip_images').select('id, position').eq('trip_id', tripId);
+    if (restErr) {
+      console.error('Failed to promote a new trip cover image:', restErr.message);
+    } else {
+      const remaining = (rows ?? []) as { id: string; position: number }[];
+      // null needs no write — the FK already cleared it.
+      await writeCover(supabase, tripId, null, coverAfterDelete(cover, imageId, remaining));
+    }
+  }
 
   const { error: removeErr } = await supabase.storage
     .from('trip-images')
