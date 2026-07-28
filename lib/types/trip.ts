@@ -42,6 +42,7 @@ export interface PublicTrip {
   name: string;
   year: number | null;
   description: string | null;
+  coverUrl: string | null;
   images: { url: string; position: number }[];
 }
 

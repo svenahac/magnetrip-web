@@ -27,14 +27,15 @@ export function TripCard({ trip, onDelete }: { trip: TripListItem; onDelete: (id
   }
 
   return (
-    <Card className="overflow-hidden">
-      <AspectRatio ratio={16 / 9} className="bg-muted">
+    <Card className="group gap-0 overflow-hidden py-0">
+      <AspectRatio ratio={16 / 9} className="overflow-hidden bg-muted">
         {trip.coverUrl ? (
           <Image src={trip.coverUrl} alt={trip.name} fill sizes="(max-width: 768px) 100vw, 33vw"
-            className="object-cover" />
+            className="object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
         ) : (
           <div className="size-full bg-gradient-to-br from-primary/80 via-primary/40 to-brand-accent/60" />
         )}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-foreground/20 to-transparent" />
       </AspectRatio>
       <CardContent className="space-y-2 p-4">
         <div className="flex items-start justify-between gap-2">
@@ -46,18 +47,18 @@ export function TripCard({ trip, onDelete }: { trip: TripListItem; onDelete: (id
             <DropdownMenuTrigger render={<Button variant="ghost" size="icon" aria-label="Trip actions" />}>
               <MoreVertical className="size-4" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem render={<Link href={`/trips/${trip.id}/edit`} />}>
+            <DropdownMenuContent align="end" className="w-auto min-w-48 max-w-[calc(100vw-2rem)]">
+              <DropdownMenuItem className="whitespace-nowrap" render={<Link href={`/trips/${trip.id}/edit`} />}>
                 <Pencil className="size-4" /> Edit
               </DropdownMenuItem>
-              <DropdownMenuItem render={<a href={url} target="_blank" rel="noopener noreferrer" />}>
+              <DropdownMenuItem className="whitespace-nowrap" render={<a href={url} target="_blank" rel="noopener noreferrer" />}>
                 <ExternalLink className="size-4" /> Show public page
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { void copyLink(); }}>
+              <DropdownMenuItem className="whitespace-nowrap" onClick={() => { void copyLink(); }}>
                 <LinkIcon className="size-4" /> Copy public link
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={() => onDelete(trip.id)}>
+              <DropdownMenuItem className="whitespace-nowrap" variant="destructive" onClick={() => onDelete(trip.id)}>
                 <Trash2 className="size-4" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>

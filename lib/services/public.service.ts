@@ -14,6 +14,7 @@ interface RpcTrip {
   name: string;
   year: number | null;
   description: string | null;
+  cover: string | null;
   images: { url: string; position: number }[];
 }
 
@@ -26,6 +27,7 @@ export async function getPublicTrip(supabase: SupabaseClient, publicId: string):
     name: trip.name,
     year: trip.year,
     description: trip.description,
+    coverUrl: trip.cover ? toAbsolute(trip.cover) : null,
     images: (trip.images ?? []).map((img) => ({ url: toAbsolute(img.url), position: img.position })),
   };
 }

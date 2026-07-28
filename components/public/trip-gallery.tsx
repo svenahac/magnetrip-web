@@ -24,7 +24,7 @@ export function TripGallery({
             alt={`${alt} — photo ${i + 1}`}
             fill
             sizes="(max-width: 640px) 50vw, 33vw"
-            {...(i === 0 ? { priority: true } : { loading: 'lazy' as const })}
+            loading="lazy"
             className="object-cover"
           />
         </div>
