@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { ImagePlus, Star, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient, ApiError } from '@/lib/api-client';
+import { coverAfterAdd, coverAfterDelete } from '@/lib/trips/cover';
 import { uploadTripImage } from '@/lib/trips/upload';
 import type { Trip, TripImage } from '@/lib/types/trip';
 import { Button } from '@/components/ui/button';
@@ -37,11 +38,17 @@ export function ImageManager({
     if (files.length === 0) return;
     setUploading(true);
     const next = [...images];
+    // Tracked locally for the same reason as `next`: setState is async, so
+    // reading `coverId` back inside the loop would see the render-time value.
+    // registerImage auto-assigns the cover server-side; mirror it here so the
+    // badge appears without a refetch.
+    let cover = coverId;
     for (const file of files) {
       try {
         const img = await uploadTripImage(trip.id, file, next.length);
         next.push(img);
-        emit([...next], coverId);
+        cover = coverAfterAdd(cover, img.id);
+        emit([...next], cover);
       } catch (err) {
         toast.error(err instanceof ApiError ? err.message : `Could not upload ${file.name}`);
       }
@@ -52,8 +59,9 @@ export function ImageManager({
   async function remove(imageId: string) {
     try {
       await apiClient.deleteImage(imageId);
-      const nextCover = coverId === imageId ? null : coverId;
-      emit(images.filter((i) => i.id !== imageId), nextCover);
+      const rest = images.filter((i) => i.id !== imageId);
+      // deleteImage promotes the next image server-side; mirror that here.
+      emit(rest, coverAfterDelete(coverId, imageId, rest));
       toast.success('Image removed');
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Could not remove the image');
