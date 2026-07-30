@@ -508,7 +508,7 @@ import { DeleteImagesDialog } from '@/components/trips/delete-images-dialog';
 - [ ] **Step 4: Replace `remove()` with the confirmation flow**
 
 The existing `import { useRef, useState } from 'react';` on line 3 already covers what this task
-needs — `useRef` is used for `lastDeleteCount` below. Task 5 adds `useEffect`.
+needs — `useRef` stays because `inputRef` uses it. Task 5 adds `useEffect`.
 
 Delete this entire existing function from `image-manager.tsx`:
 
@@ -532,17 +532,22 @@ Add these two state declarations next to the existing ones (after `const [dragIn
   // The ids awaiting confirmation; null means the dialog is closed.
   const [pendingDelete, setPendingDelete] = useState<string[] | null>(null);
   const [deleting, setDeleting] = useState(false);
-  // Holds the count through the dialog's close animation, so the copy does not
-  // flicker to "Delete this image?" on the way out. A ref avoids a re-render.
-  const lastDeleteCount = useRef(1);
+  // Held in state rather than derived from pendingDelete so the copy does not
+  // flicker to the single-image wording during the dialog's close animation.
+  const [deleteCount, setDeleteCount] = useState(1);
 ```
+
+> **Corrected during execution.** An earlier draft of this plan held the count in a
+> `useRef` and read `.current` during render. That trips `react-hooks/refs` in the
+> repo's `eslint-plugin-react-hooks`, and the rule is right — reading a ref during
+> render is not reactive. Use plain state as shown. Do not add an eslint suppression.
 
 And add these two functions where `remove()` used to be:
 
 ```tsx
   function askDelete(ids: string[]) {
     if (ids.length === 0) return;
-    lastDeleteCount.current = ids.length;
+    setDeleteCount(ids.length);
     setPendingDelete(ids);
   }
 
@@ -595,7 +600,7 @@ Immediately before the closing `</section>` tag of `ImageManager`'s returned JSX
 
 ```tsx
       <DeleteImagesDialog
-        count={pendingDelete?.length ?? lastDeleteCount.current}
+        count={deleteCount}
         coverAffected={coverId !== null && (pendingDelete?.includes(coverId) ?? false)}
         open={pendingDelete !== null}
         onOpenChange={(open) => { if (!open) setPendingDelete(null); }}
