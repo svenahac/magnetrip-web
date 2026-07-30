@@ -23,6 +23,8 @@ export function buildCss(t) {
     '--popover-foreground': c.textPrimary,
     '--primary': c.primary,
     '--primary-foreground': c.primaryForeground,
+    '--primary-dark': c.primaryDark,
+    '--primary-deep': c.primaryDeep,
     '--secondary': c.secondarySurface,
     '--secondary-foreground': c.secondary,
     '--muted': c.secondarySurface,
@@ -45,6 +47,8 @@ export function buildCss(t) {
     '--radius': t.radius.md,
   };
   const theme = [
+    '--color-primary-dark: var(--primary-dark);',
+    '--color-primary-deep: var(--primary-deep);',
     '--color-brand-accent: var(--brand-accent);',
     '--color-brand-accent-foreground: var(--brand-accent-foreground);',
     '--color-success: var(--success);',
@@ -70,6 +74,8 @@ export function buildDart(t) {
   const colors = [
     colorField('primary', c.primary),
     colorField('primaryForeground', c.primaryForeground),
+    colorField('primaryDark', c.primaryDark),
+    colorField('primaryDeep', c.primaryDeep),
     colorField('secondary', c.secondary),
     colorField('secondarySurface', c.secondarySurface),
     colorField('accent', c.accent),

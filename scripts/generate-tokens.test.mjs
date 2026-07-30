@@ -4,6 +4,7 @@ import { buildCss, buildDart } from './generate-tokens.mjs';
 const tokens = {
   color: {
     primary: '#0D9488', primaryForeground: '#FFFFFF',
+    primaryDark: '#0B6E66', primaryDeep: '#08544E',
     secondary: '#44403C', secondaryForeground: '#FFFFFF', secondarySurface: '#F0EDE7',
     accent: '#E07A5F', accentForeground: '#FFFFFF',
     background: '#FAF9F6', surface: '#FFFFFF', border: '#E7E2D9',
@@ -37,6 +38,10 @@ test('buildCss maps semantic + brand variables', () => {
   expect(css).toContain('--radius-lg: 16px;');
   expect(css).toContain('--radius-xl: 20px;');
   expect(css).toContain('--radius-2xl: 24px;');
+  expect(css).toContain('--primary-dark: #0B6E66;');
+  expect(css).toContain('--primary-deep: #08544E;');
+  expect(css).toContain('--color-primary-dark: var(--primary-dark);');
+  expect(css).toContain('--color-primary-deep: var(--primary-deep);');
 });
 
 test('buildDart maps colors to Flutter ARGB and is material-only', () => {
@@ -47,4 +52,6 @@ test('buildDart maps colors to Flutter ARGB and is material-only', () => {
   expect(dart).toContain('static const double md = 12;');
   expect(dart).toContain("fontFamily: 'Plus Jakarta Sans'");
   expect(dart).not.toContain('package:google_fonts');
+  expect(dart).toContain('static const Color primaryDark = Color(0xFF0B6E66);');
+  expect(dart).toContain('static const Color primaryDeep = Color(0xFF08544E);');
 });
