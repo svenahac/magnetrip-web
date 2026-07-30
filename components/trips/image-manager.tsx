@@ -5,13 +5,14 @@ import Image from 'next/image';
 import { ImagePlus, Star, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient, ApiError } from '@/lib/api-client';
-import { coverAfterAdd, coverAfterDelete } from '@/lib/trips/cover';
+import { coverAfterAdd, coverAfterDeleteMany } from '@/lib/trips/cover';
 import { uploadTripImage } from '@/lib/trips/upload';
 import type { Trip, TripImage } from '@/lib/types/trip';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Spinner } from '@/components/ui/spinner';
+import { DeleteImagesDialog } from '@/components/trips/delete-images-dialog';
 
 export function ImageManager({
   trip,
@@ -25,6 +26,12 @@ export function ImageManager({
   const [coverId, setCoverId] = useState<string | null>(trip.coverImageId);
   const [uploading, setUploading] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  // The ids awaiting confirmation; null means the dialog is closed.
+  const [pendingDelete, setPendingDelete] = useState<string[] | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  // Holds the count through the dialog's close animation, so the copy does not
+  // flicker to "Delete this image?" on the way out. A ref avoids a re-render.
+  const lastDeleteCount = useRef(1);
 
   function emit(nextImages: TripImage[], nextCover: string | null) {
     setImages(nextImages);
@@ -56,15 +63,35 @@ export function ImageManager({
     setUploading(false);
   }
 
-  async function remove(imageId: string) {
+  function askDelete(ids: string[]) {
+    if (ids.length === 0) return;
+    lastDeleteCount.current = ids.length;
+    setPendingDelete(ids);
+  }
+
+  async function confirmDelete() {
+    const ids = pendingDelete;
+    if (ids === null || ids.length === 0) return;
+    setDeleting(true);
     try {
-      await apiClient.deleteImage(imageId);
-      const rest = images.filter((i) => i.id !== imageId);
-      // deleteImage promotes the next image server-side; mirror that here.
-      emit(rest, coverAfterDelete(coverId, imageId, rest));
-      toast.success('Image removed');
+      // One id still uses the single endpoint — it is cheaper and already proven.
+      if (ids.length === 1) await apiClient.deleteImage(ids[0]);
+      else await apiClient.bulkDeleteImages(trip.id, ids);
+      const rest = images.filter((i) => !ids.includes(i.id));
+      // Both endpoints promote a new cover server-side; mirror that here.
+      emit(rest, coverAfterDeleteMany(coverId, ids, rest));
+      toast.success(ids.length === 1 ? 'Image removed' : `${ids.length} images removed`);
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Could not remove the image');
+      toast.error(
+        err instanceof ApiError
+          ? err.message
+          : ids.length === 1
+            ? 'Could not remove the image'
+            : 'Could not remove the images',
+      );
+    } finally {
+      setDeleting(false);
+      setPendingDelete(null);
     }
   }
 
@@ -139,12 +166,24 @@ export function ImageManager({
                 <Button type="button" size="icon" variant="secondary" aria-label="Set as cover"
                   disabled={uploading} onClick={() => void setCover(img.id)}><Star className="size-4" /></Button>
                 <Button type="button" size="icon" variant="destructive" aria-label="Delete image"
-                  disabled={uploading} onClick={() => void remove(img.id)}><Trash2 className="size-4" /></Button>
+                  disabled={uploading} onClick={() => askDelete([img.id])}><Trash2 className="size-4" /></Button>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <DeleteImagesDialog
+        // Intentional: read-only ref access to preserve the dialog's count through its
+        // close animation without a re-render.
+        // eslint-disable-next-line react-hooks/refs
+        count={pendingDelete?.length ?? lastDeleteCount.current}
+        coverAffected={coverId !== null && (pendingDelete?.includes(coverId) ?? false)}
+        open={pendingDelete !== null}
+        onOpenChange={(open) => { if (!open) setPendingDelete(null); }}
+        loading={deleting}
+        onConfirm={() => void confirmDelete()}
+      />
     </section>
   );
 }
