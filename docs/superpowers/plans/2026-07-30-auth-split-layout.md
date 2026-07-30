@@ -21,6 +21,7 @@
 - **Validation copy is shared.** Flutter's strings must match `lib/validation/auth.ts` character for character, with one documented exception (the 72-char ceiling message).
 - **Conventional Commits** (`feat:`, `fix:`, `docs:`, `chore:`), and every commit message ends with the `Co-Authored-By` trailer shown in the commit steps.
 - **`flutter analyze` has a known baseline of 3 pre-existing info-level issues**, all in files this plan does not touch: `lib/features/trips/trips_repository.dart:109` and `:110` (`use_null_aware_elements`), and `test/features/trips/trip_list_navigation_test.dart:24` (`unnecessary_underscores`). They predate this branch. Leave them alone — fixing them is out of scope. "Clean" means these 3 and nothing more.
+- **`pnpm lint` has a known baseline of 6 pre-existing problems (4 errors, 2 warnings) and exits 1**, all in files this plan does not touch: `app/(app)/dashboard/page.tsx`, `app/(app)/trips/[id]/edit/page.tsx`, `components/ui/carousel.tsx`, `hooks/use-mobile.ts`, `lib/env.test.ts`. They predate this branch (zero overlap with the branch diff). Leave them alone. "Lint clean" means no NEW problems in files this plan touches — the command still exits nonzero, so judge it by reading the file list, not the exit code.
 - **Do not delete `components/ui/card.tsx`** — `components/trips/trip-card.tsx` still uses it.
 
 ---
@@ -307,7 +308,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
 Run: `pnpm lint && pnpm build`
 
-Expected: lint clean; build succeeds.
+Expected: no lint problems in the files you touched (see the lint baseline in Global Constraints — the command exits 1 regardless), and `pnpm build` succeeds.
 
 If lint reports unused imports for `Card`, `CardContent`, `CardDescription`, `CardHeader` or `CardTitle`, the Step 3 rewrite left the old import line in place — delete it. Do **not** delete `components/ui/card.tsx` itself; `components/trips/trip-card.tsx` still imports from it.
 
@@ -1525,7 +1526,7 @@ pnpm test && pnpm lint && pnpm build
 cd ../magnetrip && flutter analyze && flutter test && cd ../magnetrip-web
 ```
 
-Expected: everything green. Paste the actual summary lines into the report — do not claim success without them.
+Expected: `pnpm test` and `flutter test` fully green; `pnpm build` succeeds; `pnpm lint` and `flutter analyze` show only their known baselines from Global Constraints and nothing new. Paste the actual summary lines into the report — do not claim success without them.
 
 - [ ] **Step 2: Confirm the token generator stayed deterministic**
 
