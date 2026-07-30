@@ -68,12 +68,18 @@ export function ImageManager({
     }
   }
 
+  // Optimistic, mirroring persistOrder below: the badge has to move on the click,
+  // so the PATCH result only ever reconciles or reverts.
   async function setCover(imageId: string) {
+    const previous = coverId;
+    if (previous === imageId) return;
+    emit(images, imageId);
     try {
       const updated = await apiClient.updateTrip(trip.id, { coverImageId: imageId });
-      emit(images, updated.coverImageId);
+      if (updated.coverImageId !== imageId) emit(images, updated.coverImageId);
       toast.success('Cover updated');
     } catch (err) {
+      emit(images, previous);
       toast.error(err instanceof ApiError ? err.message : 'Could not set the cover');
     }
   }
