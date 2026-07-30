@@ -1,5 +1,8 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-
+/**
+ * The heading block and form slot for the white 55% column. The card wrapper
+ * and the text wordmark that used to live here are gone — the white column is
+ * the card now, and the wordmark moved to AuthBrandPanel.
+ */
 export function AuthShell({
   title,
   subtitle,
@@ -10,13 +13,12 @@ export function AuthShell({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="w-full max-w-sm shadow-lg">
-      <CardHeader className="space-y-1">
-        <div className="text-lg font-extrabold tracking-tight text-primary">Magnetrip</div>
-        <CardTitle className="text-xl">{title}</CardTitle>
-        {subtitle ? <CardDescription>{subtitle}</CardDescription> : null}
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
+    <div className="w-full max-w-sm">
+      <div className="mb-6 space-y-1">
+        <h1 className="text-2xl font-extrabold tracking-tight text-foreground">{title}</h1>
+        {subtitle ? <p className="text-sm text-muted-foreground">{subtitle}</p> : null}
+      </div>
+      {children}
+    </div>
   );
 }
