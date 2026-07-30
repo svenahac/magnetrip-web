@@ -29,9 +29,9 @@ export function ImageManager({
   // The ids awaiting confirmation; null means the dialog is closed.
   const [pendingDelete, setPendingDelete] = useState<string[] | null>(null);
   const [deleting, setDeleting] = useState(false);
-  // Holds the count through the dialog's close animation, so the copy does not
-  // flicker to "Delete this image?" on the way out. A ref avoids a re-render.
-  const lastDeleteCount = useRef(1);
+  // Held in state rather than derived from pendingDelete so the copy does not
+  // flicker to the single-image wording during the dialog's close animation.
+  const [deleteCount, setDeleteCount] = useState(1);
 
   function emit(nextImages: TripImage[], nextCover: string | null) {
     setImages(nextImages);
@@ -65,7 +65,7 @@ export function ImageManager({
 
   function askDelete(ids: string[]) {
     if (ids.length === 0) return;
-    lastDeleteCount.current = ids.length;
+    setDeleteCount(ids.length);
     setPendingDelete(ids);
   }
 
@@ -174,10 +174,7 @@ export function ImageManager({
       )}
 
       <DeleteImagesDialog
-        // Intentional: read-only ref access to preserve the dialog's count through its
-        // close animation without a re-render.
-        // eslint-disable-next-line react-hooks/refs
-        count={pendingDelete?.length ?? lastDeleteCount.current}
+        count={deleteCount}
         coverAffected={coverId !== null && (pendingDelete?.includes(coverId) ?? false)}
         open={pendingDelete !== null}
         onOpenChange={(open) => { if (!open) setPendingDelete(null); }}
