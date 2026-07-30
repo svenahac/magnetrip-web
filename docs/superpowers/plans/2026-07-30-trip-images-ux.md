@@ -1272,3 +1272,28 @@ git push -u origin feat/trip-images-ux
   changing it is out of scope.
 - **A sticky mobile action bar was considered and rejected** for select mode. Wrapping handles four
   controls at 360px without new layout machinery.
+
+## Known follow-ups (recorded at completion, deliberately not fixed)
+
+The final whole-branch review found two cross-task defects, both fixed in `8dac2cb`: the client
+never renumbered `position` after a local reorder (so client and server promoted different covers
+after deleting the cover), and `setCover`'s failure path restored a stale whole-array snapshot (so a
+cover PATCH failing after a bulk delete resurrected the deleted images). The fix introduced
+`latestImagesRef`/`latestCoverRef`, an `applyCover()` helper that no-ops on a vanished id, and a
+sequence guard on `setCover`.
+
+Four related items were reviewed and parked as not load-bearing:
+
+1. `confirmDelete` computes the surviving list from its render closure after awaiting the delete —
+   the same stale-closure class. Currently unreachable: in select mode nothing can mutate `images`
+   during the await (Add is hidden, `draggable` is false, star/trash are not rendered, and the
+   dialog is modal with its buttons disabled). If any of those change, switch it to
+   `latestImagesRef.current`.
+2. `onFiles` builds its next-list and cover from the render closure across a loop of awaits, so a
+   delete landing mid-upload could re-add removed images. Pre-existing upload code.
+3. Uploads assign `position: next.length` while deletes leave positional gaps, so a post-delete
+   upload can tie an existing `position`. Client and server break such a tie by different rules
+   (display order vs. unordered select). Pre-existing.
+4. A failed delete closes the confirmation dialog, whereas `DeleteTripDialog` stays open for retry.
+   The asymmetry is real; the spec's failure contract (error toast, selection preserved, still in
+   select mode, nothing removed) is satisfied, and retry is one click away.
