@@ -32,7 +32,9 @@ alone produces nothing. Three edits are required:
 
 - `buildCss` → `root`: `--primary-dark`, `--primary-deep`.
 - `buildCss` → `theme`: `--color-primary-dark: var(--primary-dark);` and the `primary-deep`
-  equivalent, so Tailwind resolves `via-primary-dark` / `to-primary-deep`.
+  equivalent, emitted for future use by Tailwind gradient utilities (`via-primary-dark` /
+  `to-primary-deep`) — the panel itself currently consumes the raw `var(--primary-dark)` /
+  `var(--primary-deep)` custom properties via an arbitrary gradient value, not these utilities.
 - `buildDart` → `colors`: `primaryDark`, `primaryDeep`.
 
 `scripts/generate-tokens.test.mjs` extends to assert all of the above. `pnpm tokens` then
@@ -59,14 +61,17 @@ generated file is ever hand-edited.
 3. Tagline "Tap a magnet. Relive the trip." — white at 90% opacity, ~13px. This is existing shipped copy
    from `app/layout.tsx` metadata, reused rather than newly invented.
 
-**Form column.** White (`surface` token). Content capped at 384px wide, vertically centered. The
-card wrapper, its border and its shadow are removed on web — the white column *is* the card now.
+**Form column.** White (`surface` token). Content capped at 384px wide. On **web** the column is
+vertically centered. Flutter deliberately top-aligns the form column under the band instead — see
+§4, where the column sits in a `SingleChildScrollView` and centering would fight the scroll/keyboard
+behaviour. The card wrapper, its border and its shadow are removed on web — the white column *is*
+the card now.
 
 **Contrast.** White on `#0D9488` computes to **3.74:1**, which fails WCAG AA for body text. Placing
 `primaryDark` at the 45% gradient stop puts the centered content block on ≈`#0B6E66`, giving
-**6.15:1** for the wordmark and **≈5.3:1** for the 90%-opacity tagline. Both pass AA. This is the
-reason the middle stop is at 45% and not further down. These are computed values; confirm with a
-contrast checker during verification.
+**6.55:1** for the wordmark and **5.80:1** for the 90%-opacity tagline, as measured in Chrome. Both
+pass AA — the wordmark needs 3.0 (≥24px counts as large text) and the tagline needs 4.5. This is
+the reason the middle stop is at 45% and not further down.
 
 **Medallion accessibility.** Decorative on both platforms — `alt=""` on web, no semantic label in
 Flutter. The wordmark immediately beside it already announces "Magnetrip"; labelling the image
@@ -111,8 +116,8 @@ Colours come from tokens only:
 `bg-[linear-gradient(160deg,var(--primary)_0%,var(--primary-dark)_45%,var(--primary-deep)_100%)]`
 and `bg-card`. Nothing hardcoded, per CLAUDE.md.
 
-**Asset.** 384px covers a 128px medallion at 3× DPR and takes the 1.7 MB source down to roughly
-100 KB. Rendered via `next/image` with `priority`, so it does not pop in after first paint.
+**Asset.** 384px covers a 128px medallion at 3× DPR and takes the 1.7 MB source down to 239,176
+bytes. Rendered via `next/image` with `priority`, so it does not pop in after first paint.
 
 ## 4. Flutter restyle
 
@@ -211,8 +216,13 @@ without adding `/signup` to that set bounces every signed-out visitor straight b
 Both edits belong in one commit.
 
 **Known limitation, inherited not introduced.** `emailRedirectTo` points at the web callback, so a
-phone user tapping the confirmation link lands on the *web* dashboard rather than back in the app.
-`sendPasswordReset` already behaves this way. Deep-linking is out of scope.
+phone user tapping the confirmation link lands on the web **login** page rather than back in the
+app: `supabase_flutter` defaults to PKCE, so the code verifier lives in the app's storage; the
+emailed link hits Supabase's verify endpoint (which does confirm the account), then redirects to
+the web `/auth/callback?code=…`, where `exchangeCodeForSession` needs a verifier cookie the phone
+browser never had, so it falls through to `/login?error=auth_callback`. The account is confirmed
+and the user can return to the app and sign in — there is no dead end, only a landing page other
+than the dashboard. `sendPasswordReset` already behaves this way. Deep-linking is out of scope.
 
 ## 6. Testing and verification
 
