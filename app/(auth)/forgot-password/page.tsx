@@ -50,7 +50,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <AuthShell title="Reset your password" subtitle="We'll email you a reset link">
+    <AuthShell title="Reset your password" subtitle="We'll email you a reset link.">
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -62,8 +62,7 @@ export default function ForgotPasswordPage() {
           {loading ? <Loader2 className="size-4 animate-spin" /> : 'Send reset link'}
         </Button>
         <p className="text-center text-sm text-muted-foreground">
-          Remembered it?{' '}
-          <Link href="/login" className="text-primary hover:underline">Sign in</Link>
+          <Link href="/login" className="text-primary hover:underline">Back to sign in</Link>
         </p>
       </form>
     </AuthShell>
