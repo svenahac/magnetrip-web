@@ -20,6 +20,7 @@
 - **Split ratio:** 45% panel / 55% form. Web splits horizontally at `md:` (768px) and vertically below it. Flutter always splits vertically. **Flutter's band additionally has a 240dp floor** (`math.max(screenHeight * 0.45, 240.0)`) — on a short landscape screen a literal 45% is less tall than the medallion plus copy and would throw a `RenderFlex` overflow. The floor is required, not a deviation.
 - **Validation copy is shared.** Flutter's strings must match `lib/validation/auth.ts` character for character, with one documented exception (the 72-char ceiling message).
 - **Conventional Commits** (`feat:`, `fix:`, `docs:`, `chore:`), and every commit message ends with the `Co-Authored-By` trailer shown in the commit steps.
+- **`flutter analyze` has a known baseline of 3 pre-existing info-level issues**, all in files this plan does not touch: `lib/features/trips/trips_repository.dart:109` and `:110` (`use_null_aware_elements`), and `test/features/trips/trip_list_navigation_test.dart:24` (`unnecessary_underscores`). They predate this branch. Leave them alone — fixing them is out of scope. "Clean" means these 3 and nothing more.
 - **Do not delete `components/ui/card.tsx`** — `components/trips/trip-card.tsx` still uses it.
 
 ---
@@ -169,7 +170,7 @@ Expected: the diffs list only `app/tokens.generated.css` (in web) and `lib/theme
 
 Run: `cd ../magnetrip && flutter analyze`
 
-Expected: "No issues found!" — the regenerated theme file is valid Dart.
+Expected: exactly the 3 pre-existing info-level issues listed in Global Constraints (2 in `lib/features/trips/trips_repository.dart`, 1 in `test/features/trips/trip_list_navigation_test.dart`) and nothing new. The regenerated theme file itself must be clean.
 
 - [ ] **Step 9: Commit (both repos)**
 
@@ -530,7 +531,7 @@ Expected: PASS, all groups green.
 
 Run: `cd ../magnetrip && flutter analyze`
 
-Expected: "No issues found!"
+Expected: exactly the 3 pre-existing info-level issues listed in Global Constraints (2 in `lib/features/trips/trips_repository.dart`, 1 in `test/features/trips/trip_list_navigation_test.dart`) and nothing new.
 
 - [ ] **Step 6: Commit**
 
@@ -994,7 +995,7 @@ The `appBar: AppBar()` is deliberately not carried over: a back arrow floating o
 
 Run: `cd ../magnetrip && flutter analyze && flutter test`
 
-Expected: "No issues found!" and every test passing. Watch for an unused-import warning on `app_theme.dart` in either screen — if one appears, that screen no longer references `MagnetripColors`/`MagnetripSpacing` and the import should go.
+Expected: exactly the 3 pre-existing info-level issues listed in Global Constraints (2 in `lib/features/trips/trips_repository.dart`, 1 in `test/features/trips/trip_list_navigation_test.dart`) and nothing new, and every test passing. Watch for an unused-import warning on `app_theme.dart` in either screen — if one appears, that screen no longer references `MagnetripColors`/`MagnetripSpacing` and the import should go.
 
 - [ ] **Step 9: Commit**
 
@@ -1353,7 +1354,7 @@ Note the `_tapCreate` helper exists specifically because the button is below the
 
 Run: `cd ../magnetrip && flutter analyze && flutter test`
 
-Expected: "No issues found!" and every test passing.
+Expected: exactly the 3 pre-existing info-level issues listed in Global Constraints (2 in `lib/features/trips/trips_repository.dart`, 1 in `test/features/trips/trip_list_navigation_test.dart`) and nothing new, and every test passing.
 
 - [ ] **Step 7: Commit**
 
@@ -1491,7 +1492,7 @@ Expected: PASS, 3 tests total.
 
 Run: `cd ../magnetrip && flutter analyze && flutter test`
 
-Expected: "No issues found!" and every test passing.
+Expected: exactly the 3 pre-existing info-level issues listed in Global Constraints (2 in `lib/features/trips/trips_repository.dart`, 1 in `test/features/trips/trip_list_navigation_test.dart`) and nothing new, and every test passing.
 
 - [ ] **Step 8: Commit**
 
