@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { TripImage, RegisterImageInput } from '@/lib/types/trip';
-import { coverAfterAdd, coverAfterDelete } from '@/lib/trips/cover';
+import { coverAfterAdd, coverAfterDelete, coverAfterDeleteMany } from '@/lib/trips/cover';
 import { ServiceError } from './errors';
 import { mapImageRow, type ImageRow } from './mappers';
 import { IMAGE_COLUMNS } from './trips.service';
@@ -151,4 +151,56 @@ export async function deleteImage(supabase: SupabaseClient, imageId: string): Pr
   if (removeErr) {
     console.error('Failed to remove trip image from storage:', removeErr.message);
   }
+}
+
+/**
+ * Deletes several images belonging to one trip in a single pass: one row delete,
+ * at most one cover recompute, one storage removal. Returns how many were deleted.
+ */
+export async function deleteImages(
+  supabase: SupabaseClient,
+  tripId: string,
+  imageIds: string[],
+): Promise<number> {
+  // RLS: these rows come back only when the caller owns the parent trip, so a
+  // short count means an id was foreign or already gone.
+  const { data: rows, error } = await supabase
+    .from('trip_images')
+    .select('id, storage_path')
+    .eq('trip_id', tripId)
+    .in('id', imageIds);
+  if (error) throw new ServiceError('internal', error.message);
+  const found = (rows ?? []) as { id: string; storage_path: string }[];
+  if (found.length !== imageIds.length) {
+    throw new ServiceError('not_found', 'One or more images were not found');
+  }
+
+  // Read the cover before the delete: the FK nulls the column on the way out,
+  // so afterwards there is no way to tell whether one of these was the cover.
+  const cover = await readCover(supabase, tripId);
+
+  const { error: delErr } = await supabase
+    .from('trip_images').delete().eq('trip_id', tripId).in('id', imageIds);
+  if (delErr) throw new ServiceError('internal', delErr.message);
+
+  if (cover !== undefined && cover !== null && imageIds.includes(cover)) {
+    const { data: restRows, error: restErr } = await supabase
+      .from('trip_images').select('id, position').eq('trip_id', tripId);
+    if (restErr) {
+      console.error('Failed to promote a new trip cover image:', restErr.message);
+    } else {
+      const remaining = (restRows ?? []) as { id: string; position: number }[];
+      // null needs no write — the FK already cleared it.
+      await writeCover(supabase, tripId, null, coverAfterDeleteMany(cover, imageIds, remaining));
+    }
+  }
+
+  const { error: removeErr } = await supabase.storage
+    .from('trip-images')
+    .remove(found.map((r) => r.storage_path));
+  if (removeErr) {
+    console.error('Failed to remove trip images from storage:', removeErr.message);
+  }
+
+  return found.length;
 }
