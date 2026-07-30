@@ -258,6 +258,16 @@ tests are not possible, and adding that harness is not in scope for a login rest
 
 - **Tagline copy** is "Tap a magnet. Relive the trip." (requester's choice, 2026-07-30).
   Swapping or removing it is a one-line change in each `AuthBrandPanel` / `AuthScaffold`.
+- **`emailRedirectTo` uses `AppConfig.apiBaseUrl`, not `publicSiteUrl`** (`auth_providers.dart`,
+  both `signUp` and the pre-existing `sendPasswordReset`). `publicSiteUrl` is the semantically
+  correct value — it is documented as the public web-app URL and is separately overridable — while
+  `apiBaseUrl` is the API host. They default to the same string today, so nothing is broken. If
+  `API_BASE_URL` is ever pointed at a distinct host, both signup-confirmation and password-reset
+  emails break. Left unchanged deliberately: fixing it means touching pre-existing reset behaviour,
+  which is the maintainer's call. Fix both call sites or neither.
+- **Flutter's `auth_scaffold.dart` gradient comment still cites the pre-measurement 6.15:1 figure.**
+  The measured values are 6.55:1 (wordmark) and 5.80:1 (tagline); the web panel's comment was
+  updated but the Flutter one was left alone to keep that fix wave to a single repo.
 - **`assets/logo.png` has an opaque light-blue background**, which is why the medallion is a circle
   crop with a white ring rather than a free-standing mark. If a transparent PNG or SVG of the mark
   ever exists, the panel can drop the ring and render the mark directly on the gradient — a change
