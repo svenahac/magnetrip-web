@@ -15,7 +15,7 @@
 - **Never hardcode colours.** Web uses `var(--token)` / Tailwind token classes; Flutter uses `MagnetripColors.*` and `MagnetripSpacing.*` **Carve-out, ruled by the human on 2026-07-30:** the medallion drop shadow (`rgba(0,0,0,0.32)` on web, `Color(0x52000000)` on Flutter) and the white ring/text alphas stay literal. `design/tokens.json` has no shadow, elevation, or overlay concept, and adding a cross-platform shadow token for one medallion is out of scope. Not a finding.
 - **Exact colour values:** `primaryDark` = `#0B6E66`, `primaryDeep` = `#08544E`. Existing `primary` = `#0D9488`.
 - **Exact gradient:** 160°, stops `primary 0%`, `primaryDark 45%`, `primaryDeep 100%`. The 45% middle stop is a WCAG requirement, not a taste call — white on `#0D9488` is 3.74:1 and fails AA, while white on `#0B6E66` is 6.15:1 and passes. Do not move it.
-- **Exact panel copy:** wordmark `Magnetrip`, tagline `Your trips, on a magnet.`
+- **Exact panel copy:** wordmark `Magnetrip`, tagline `Tap a magnet. Relive the trip.`
 - **Medallion sizes:** 128px web ≥768px, 96px web <768px, 112dp Flutter. White ring `rgba(255,255,255,0.95)`, 3px. Decorative — `alt=""` on web, no semantic label on Flutter.
 - **Split ratio:** 45% panel / 55% form. Web splits horizontally at `md:` (768px) and vertically below it. Flutter always splits vertically. **Flutter's band additionally has a 240dp floor** (`math.max(screenHeight * 0.45, 240.0)`) — on a short landscape screen a literal 45% is less tall than the medallion plus copy and would throw a `RenderFlex` overflow. The floor is required, not a deviation.
 - **Validation copy is shared.** Flutter's strings must match `lib/validation/auth.ts` character for character, with one documented exception (the 72-char ceiling message).
@@ -244,7 +244,7 @@ export function AuthBrandPanel() {
         className="size-24 rounded-full border-[3px] border-white/95 object-cover shadow-[0_7px_20px_rgba(0,0,0,0.32)] md:size-32"
       />
       <p className="text-xl font-extrabold tracking-tight text-white md:text-2xl">Magnetrip</p>
-      <p className="text-[13px] text-white/90">Your trips, on a magnet.</p>
+      <p className="text-[13px] text-white/90">Tap a magnet. Relive the trip.</p>
     </div>
   );
 }
@@ -614,7 +614,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Magnetrip'), findsOneWidget);
-    expect(find.text('Your trips, on a magnet.'), findsOneWidget);
+    expect(find.text('Tap a magnet. Relive the trip.'), findsOneWidget);
     expect(find.text('Welcome back'), findsOneWidget);
     expect(find.text('Sign in to manage your trips'), findsOneWidget);
     expect(find.text('form goes here'), findsOneWidget);
@@ -801,7 +801,7 @@ class _BrandBand extends StatelessWidget {
             ),
             const SizedBox(height: MagnetripSpacing.s1),
             Text(
-              'Your trips, on a magnet.',
+              'Tap a magnet. Relive the trip.',
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 13,

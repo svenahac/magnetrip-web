@@ -21,7 +21,7 @@ export function AuthBrandPanel() {
         className="size-24 rounded-full border-[3px] border-white/95 object-cover shadow-[0_7px_20px_rgba(0,0,0,0.32)] md:size-32"
       />
       <p className="text-xl font-extrabold tracking-tight text-white md:text-2xl">Magnetrip</p>
-      <p className="text-[13px] text-white/90">Your trips, on a magnet.</p>
+      <p className="text-[13px] text-white/90">Tap a magnet. Relive the trip.</p>
     </div>
   );
 }

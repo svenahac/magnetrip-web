@@ -56,7 +56,7 @@ generated file is ever hand-edited.
 1. Circular medallion — the logo, `cover`-fitted, 3px `rgba(255,255,255,0.95)` ring, soft drop
    shadow. 128px (web ≥768px) / 96px (web <768px) / 112dp (Flutter).
 2. Wordmark "Magnetrip" — white, extrabold, tight tracking. 24px / 20px / 22sp.
-3. Tagline "Your trips, on a magnet." — white at 90% opacity, ~13px. This is existing shipped copy
+3. Tagline "Tap a magnet. Relive the trip." — white at 90% opacity, ~13px. This is existing shipped copy
    from `app/layout.tsx` metadata, reused rather than newly invented.
 
 **Form column.** White (`surface` token). Content capped at 384px wide, vertically centered. The
@@ -246,7 +246,7 @@ tests are not possible, and adding that harness is not in scope for a login rest
 
 ## 7. Open items
 
-- **Tagline copy** is "Your trips, on a magnet.", lifted from existing `app/layout.tsx` metadata.
+- **Tagline copy** is "Tap a magnet. Relive the trip." (requester's choice, 2026-07-30).
   Swapping or removing it is a one-line change in each `AuthBrandPanel` / `AuthScaffold`.
 - **`assets/logo.png` has an opaque light-blue background**, which is why the medallion is a circle
   crop with a white ring rather than a free-standing mark. If a transparent PNG or SVG of the mark
