@@ -26,6 +26,15 @@ export const reorderImagesSchema = z.object({
   imageIds: z.array(z.string().uuid()).min(1),
 });
 
+export const bulkDeleteImagesSchema = z.object({
+  imageIds: z
+    .array(z.string().uuid())
+    .min(1)
+    .max(100)
+    // Duplicates would make the service's found-count check fail spuriously.
+    .refine((ids) => new Set(ids).size === ids.length, 'Image list contains duplicates'),
+});
+
 export const linkNfcSchema = z.object({
   nfcTagId: z.string().min(1).max(255),
 });

@@ -53,6 +53,8 @@ export const apiClient = {
   registerImage: (tripId: string, input: RegisterImageInput) => request<TripImage>(`/api/trips/${tripId}/images`, { method: 'POST', body: input }),
   reorderImages: (tripId: string, imageIds: string[]) => request<void>(`/api/trips/${tripId}/images/reorder`, { method: 'PATCH', body: { imageIds } }),
   deleteImage: (imageId: string) => request<void>(`/api/images/${imageId}`, { method: 'DELETE' }),
+  bulkDeleteImages: (tripId: string, imageIds: string[]) =>
+    request<{ deleted: number }>(`/api/trips/${tripId}/images/bulk-delete`, { method: 'POST', body: { imageIds } }),
   linkNfc: (tripId: string, nfcTagId: string) => request<Trip>(`/api/trips/${tripId}/nfc`, { method: 'PATCH', body: { nfcTagId } }),
   getPublicTrip: (publicId: string) => request<PublicTrip>(`/api/public/trips/${publicId}`),
 };
