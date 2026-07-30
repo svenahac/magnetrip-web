@@ -12,7 +12,7 @@
 
 - **Two repos, one branch name.** `magnetrip-web` and `../magnetrip` are separate git repos, both already on `feat/auth-split-layout`. Never commit to `main`.
 - **Never hand-edit generated files.** `app/tokens.generated.css` and `../magnetrip/lib/theme/app_theme.dart` are written by `scripts/generate-tokens.mjs`. Change `design/tokens.json` + the generator, then run `pnpm tokens`.
-- **Never hardcode colours.** Web uses `var(--token)` / Tailwind token classes; Flutter uses `MagnetripColors.*` and `MagnetripSpacing.*`.
+- **Never hardcode colours.** Web uses `var(--token)` / Tailwind token classes; Flutter uses `MagnetripColors.*` and `MagnetripSpacing.*` **Carve-out, ruled by the human on 2026-07-30:** the medallion drop shadow (`rgba(0,0,0,0.32)` on web, `Color(0x52000000)` on Flutter) and the white ring/text alphas stay literal. `design/tokens.json` has no shadow, elevation, or overlay concept, and adding a cross-platform shadow token for one medallion is out of scope. Not a finding.
 - **Exact colour values:** `primaryDark` = `#0B6E66`, `primaryDeep` = `#08544E`. Existing `primary` = `#0D9488`.
 - **Exact gradient:** 160°, stops `primary 0%`, `primaryDark 45%`, `primaryDeep 100%`. The 45% middle stop is a WCAG requirement, not a taste call — white on `#0D9488` is 3.74:1 and fails AA, while white on `#0B6E66` is 6.15:1 and passes. Do not move it.
 - **Exact panel copy:** wordmark `Magnetrip`, tagline `Your trips, on a magnet.`
