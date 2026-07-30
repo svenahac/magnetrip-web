@@ -17,7 +17,7 @@
 - **Exact gradient:** 160°, stops `primary 0%`, `primaryDark 45%`, `primaryDeep 100%`. The 45% middle stop is a WCAG requirement, not a taste call — white on `#0D9488` is 3.74:1 and fails AA, while white on `#0B6E66` is 6.15:1 and passes. Do not move it.
 - **Exact panel copy:** wordmark `Magnetrip`, tagline `Your trips, on a magnet.`
 - **Medallion sizes:** 128px web ≥768px, 96px web <768px, 112dp Flutter. White ring `rgba(255,255,255,0.95)`, 3px. Decorative — `alt=""` on web, no semantic label on Flutter.
-- **Split ratio:** 45% panel / 55% form. Web splits horizontally at `md:` (768px) and vertically below it. Flutter always splits vertically.
+- **Split ratio:** 45% panel / 55% form. Web splits horizontally at `md:` (768px) and vertically below it. Flutter always splits vertically. **Flutter's band additionally has a 240dp floor** (`math.max(screenHeight * 0.45, 240.0)`) — on a short landscape screen a literal 45% is less tall than the medallion plus copy and would throw a `RenderFlex` overflow. The floor is required, not a deviation.
 - **Validation copy is shared.** Flutter's strings must match `lib/validation/auth.ts` character for character, with one documented exception (the 72-char ceiling message).
 - **Conventional Commits** (`feat:`, `fix:`, `docs:`, `chore:`), and every commit message ends with the `Co-Authored-By` trailer shown in the commit steps.
 - **Do not delete `components/ui/card.tsx`** — `components/trips/trip-card.tsx` still uses it.
