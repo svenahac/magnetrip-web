@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { ImagePlus, Star, Trash2 } from 'lucide-react';
+import { Check, ImagePlus, SquareCheckBig, Star, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient, ApiError } from '@/lib/api-client';
 import { coverAfterAdd, coverAfterDeleteMany } from '@/lib/trips/cover';
@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { Spinner } from '@/components/ui/spinner';
 import { DeleteImagesDialog } from '@/components/trips/delete-images-dialog';
+import { cn } from '@/lib/utils';
 
 export function ImageManager({
   trip,
@@ -32,12 +33,40 @@ export function ImageManager({
   // Held in state rather than derived from pendingDelete so the copy does not
   // flicker to the single-image wording during the dialog's close animation.
   const [deleteCount, setDeleteCount] = useState(1);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
 
   function emit(nextImages: TripImage[], nextCover: string | null) {
     setImages(nextImages);
     setCoverId(nextCover);
     onChange({ images: nextImages, coverImageId: nextCover });
   }
+
+  const allSelected = images.length > 0 && selected.length === images.length;
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelected([]);
+  }
+
+  function toggleOne(id: string) {
+    setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  }
+
+  function toggleSelectAll() {
+    setSelected(allSelected ? [] : images.map((i) => i.id));
+  }
+
+  // Escape leaves select mode, but not while the confirmation dialog is open —
+  // there, Escape belongs to the dialog.
+  useEffect(() => {
+    if (!selectMode || pendingDelete !== null) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') exitSelectMode();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectMode, pendingDelete]);
 
   async function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -81,6 +110,7 @@ export function ImageManager({
       // Both endpoints promote a new cover server-side; mirror that here.
       emit(rest, coverAfterDeleteMany(coverId, ids, rest));
       toast.success(ids.length === 1 ? 'Image removed' : `${ids.length} images removed`);
+      exitSelectMode();
     } catch (err) {
       toast.error(
         err instanceof ApiError
@@ -133,11 +163,41 @@ export function ImageManager({
 
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Images</h2>
-        <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()} disabled={uploading}>
-          {uploading ? <Spinner /> : <ImagePlus className="size-4" />} Add images
-        </Button>
+      {/* flex-wrap so four controls wrap to a second line at 360px instead of overflowing */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {selectMode ? (
+          <>
+            <h2 className="text-lg font-semibold" aria-live="polite">
+              {selected.length} selected
+            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={toggleSelectAll} disabled={deleting}>
+                {allSelected ? 'Deselect all' : 'Select all'}
+              </Button>
+              <Button variant="destructive" size="sm" disabled={selected.length === 0 || deleting}
+                onClick={() => askDelete(selected)}>
+                <Trash2 className="size-4" /> Delete ({selected.length})
+              </Button>
+              <Button variant="ghost" size="sm" onClick={exitSelectMode} disabled={deleting}>
+                Cancel
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 className="text-lg font-semibold">Images</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              {images.length > 0 ? (
+                <Button variant="outline" size="sm" onClick={() => setSelectMode(true)} disabled={uploading}>
+                  <SquareCheckBig className="size-4" /> Select
+                </Button>
+              ) : null}
+              <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()} disabled={uploading}>
+                {uploading ? <Spinner /> : <ImagePlus className="size-4" />} Add images
+              </Button>
+            </div>
+          </>
+        )}
         <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={onFiles} />
       </div>
 
@@ -147,29 +207,57 @@ export function ImageManager({
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {images.map((img, index) => (
-            <div
-              key={img.id}
-              draggable={!uploading}
-              onDragStart={() => setDragIndex(index)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => onDrop(index)}
-              className="group relative cursor-move overflow-hidden rounded-lg border border-border"
-            >
-              <AspectRatio ratio={1}>
-                <Image src={img.url} alt={`Trip photo ${index + 1}`} fill sizes="33vw" className="object-cover" />
-              </AspectRatio>
-              {coverId === img.id ? (
-                <Badge className="absolute left-2 top-2">Cover</Badge>
-              ) : null}
-              <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-gradient-to-t from-foreground/70 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
-                <Button type="button" size="icon" variant="secondary" aria-label="Set as cover"
-                  disabled={uploading} onClick={() => void setCover(img.id)}><Star className="size-4" /></Button>
-                <Button type="button" size="icon" variant="destructive" aria-label="Delete image"
-                  disabled={uploading} onClick={() => askDelete([img.id])}><Trash2 className="size-4" /></Button>
+          {images.map((img, index) => {
+            const isSelected = selected.includes(img.id);
+            return (
+              <div
+                key={img.id}
+                draggable={!uploading && !selectMode}
+                onDragStart={() => setDragIndex(index)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => onDrop(index)}
+                onClick={selectMode ? () => toggleOne(img.id) : undefined}
+                onKeyDown={selectMode ? (e) => {
+                  if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleOne(img.id); }
+                } : undefined}
+                role={selectMode ? 'checkbox' : undefined}
+                aria-checked={selectMode ? isSelected : undefined}
+                aria-label={selectMode ? `Photo ${index + 1}` : undefined}
+                tabIndex={selectMode ? 0 : undefined}
+                className={cn(
+                  'group relative overflow-hidden rounded-lg border border-border outline-none',
+                  selectMode ? 'cursor-pointer focus-visible:ring-3 focus-visible:ring-ring/50' : 'cursor-move',
+                  isSelected && 'ring-2 ring-primary',
+                )}
+              >
+                <AspectRatio ratio={1}>
+                  <Image src={img.url} alt={`Trip photo ${index + 1}`} fill sizes="33vw"
+                    className={cn('object-cover transition-opacity', selectMode && !isSelected && 'opacity-70')} />
+                </AspectRatio>
+                {coverId === img.id ? (
+                  <Badge className="absolute left-2 top-2">Cover</Badge>
+                ) : null}
+                {selectMode ? (
+                  /* Plain indicator rather than <Checkbox>: nesting a checkbox widget
+                     inside role="checkbox" is invalid, and this reads better over a photo.
+                     Top-right so it never collides with the Cover badge. */
+                  <span aria-hidden className={cn(
+                    'absolute right-2 top-2 flex size-6 items-center justify-center rounded-full border-2 border-background/80 shadow-sm transition-colors',
+                    isSelected ? 'bg-primary text-primary-foreground' : 'bg-foreground/25',
+                  )}>
+                    {isSelected ? <Check className="size-4" /> : null}
+                  </span>
+                ) : (
+                  <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-gradient-to-t from-foreground/70 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                    <Button type="button" size="icon" variant="secondary" aria-label="Set as cover"
+                      disabled={uploading} onClick={() => void setCover(img.id)}><Star className="size-4" /></Button>
+                    <Button type="button" size="icon" variant="destructive" aria-label="Delete image"
+                      disabled={uploading} onClick={() => askDelete([img.id])}><Trash2 className="size-4" /></Button>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
