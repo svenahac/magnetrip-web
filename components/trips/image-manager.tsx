@@ -35,11 +35,38 @@ export function ImageManager({
   const [deleteCount, setDeleteCount] = useState(1);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+  // Held in state for the same reason as deleteCount: derived-from-pendingDelete
+  // would flicker false while the dialog is still animating out (pendingDelete
+  // is nulled in confirmDelete's finally before the close animation finishes).
+  const [coverAffected, setCoverAffected] = useState(false);
+
+  // Mirrors the latest emitted state so async revert/reconcile paths (in
+  // setCover and persistOrder) can read the current truth instead of a stale
+  // closure snapshot — a delete, or another cover change, can land while one
+  // of those requests is still in flight. Only ever read inside async
+  // callbacks below, never during render.
+  const latestImagesRef = useRef<TripImage[]>(images);
+  const latestCoverRef = useRef<string | null>(coverId);
+  // Bumped at the start of every setCover call so a superseded in-flight
+  // request's reconcile/revert can't overwrite a newer one.
+  const coverSeqRef = useRef(0);
 
   function emit(nextImages: TripImage[], nextCover: string | null) {
+    latestImagesRef.current = nextImages;
+    latestCoverRef.current = nextCover;
     setImages(nextImages);
     setCoverId(nextCover);
     onChange({ images: nextImages, coverImageId: nextCover });
+  }
+
+  // Cover-only update: applies against the latest known image list rather
+  // than a closure snapshot, and no-ops when the target cover id is no
+  // longer present in that list — so a cover write can never resurrect
+  // already-deleted images or point the cover at a gone id.
+  function applyCover(nextCover: string | null) {
+    const current = latestImagesRef.current;
+    if (nextCover !== null && !current.some((img) => img.id === nextCover)) return;
+    emit(current, nextCover);
   }
 
   const allSelected = images.length > 0 && selected.length === images.length;
@@ -95,6 +122,7 @@ export function ImageManager({
   function askDelete(ids: string[]) {
     if (ids.length === 0) return;
     setDeleteCount(ids.length);
+    setCoverAffected(coverId !== null && ids.includes(coverId));
     setPendingDelete(ids);
   }
 
@@ -126,28 +154,56 @@ export function ImageManager({
   }
 
   // Optimistic, mirroring persistOrder below: the badge has to move on the click,
-  // so the PATCH result only ever reconciles or reverts.
+  // so the PATCH result only ever reconciles or reverts. All three writes go
+  // through applyCover (not emit(images, ...)) so a stale closure over `images`
+  // can never resurrect images a concurrent delete already removed, and the
+  // seq guard means a request that a later click has superseded can't stomp
+  // that later click's result once it resolves.
   async function setCover(imageId: string) {
     const previous = coverId;
     if (previous === imageId) return;
-    emit(images, imageId);
+    const seq = ++coverSeqRef.current;
+    applyCover(imageId);
     try {
       const updated = await apiClient.updateTrip(trip.id, { coverImageId: imageId });
-      if (updated.coverImageId !== imageId) emit(images, updated.coverImageId);
+      if (coverSeqRef.current !== seq) return;
+      if (updated.coverImageId !== imageId) applyCover(updated.coverImageId);
       toast.success('Cover updated');
     } catch (err) {
-      emit(images, previous);
+      if (coverSeqRef.current !== seq) return;
+      applyCover(previous);
       toast.error(err instanceof ApiError ? err.message : 'Could not set the cover');
     }
   }
 
   async function persistOrder(next: TripImage[]) {
     const previous = images;
-    emit(next, coverId);
+    const previousCover = coverId;
+    // Renumber positions to match what reorderImages writes server-side
+    // (`position = i`, lib/services/images.service.ts:110-116). Without this
+    // the client keeps stale pre-drag positions for the rest of the editing
+    // session, so a later cover promotion (coverAfterDeleteMany, which picks
+    // the lowest-position survivor) can pick a different image than the
+    // server did.
+    const renumbered = next.map((img, i) => ({ ...img, position: i }));
+    emit(renumbered, coverId);
     try {
-      await apiClient.reorderImages(trip.id, next.map((i) => i.id));
+      await apiClient.reorderImages(trip.id, renumbered.map((i) => i.id));
     } catch (err) {
-      emit(previous, coverId); // revert on failure
+      // Don't resurrect: a delete may have landed while this reorder was in
+      // flight, so only restore the ordering for images that still exist,
+      // appending any images that appeared since (from an upload) in their
+      // current order. Only reinstate the pre-reorder cover if it's still
+      // around; otherwise defer to whatever cover is currently live rather
+      // than reintroducing a deleted id.
+      const current = latestImagesRef.current;
+      const currentIds = new Set(current.map((img) => img.id));
+      const restoredOrder = previous.filter((img) => currentIds.has(img.id));
+      const restoredOrderIds = new Set(restoredOrder.map((img) => img.id));
+      const appended = current.filter((img) => !restoredOrderIds.has(img.id));
+      const restoredCover =
+        previousCover !== null && currentIds.has(previousCover) ? previousCover : latestCoverRef.current;
+      emit([...restoredOrder, ...appended], restoredCover);
       toast.error(err instanceof ApiError ? err.message : 'Could not reorder images');
     }
   }
@@ -263,7 +319,7 @@ export function ImageManager({
 
       <DeleteImagesDialog
         count={deleteCount}
-        coverAffected={coverId !== null && (pendingDelete?.includes(coverId) ?? false)}
+        coverAffected={coverAffected}
         open={pendingDelete !== null}
         onOpenChange={(open) => { if (!open) setPendingDelete(null); }}
         loading={deleting}
